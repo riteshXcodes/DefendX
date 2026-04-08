@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ───────────────────────────────────────────────────────────────────
+
+enum JobStatus {
+  PENDING
+  FETCHING
+  ANALYZING
+  REMEDIATING
+  COMPLETED
+  ERROR
+}
+
+enum ActionStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  FAILED
+}
+
+enum Domain {
+  http
+  infra
+  auth
+}
+
+enum Severity {
+  critical
+  high
+  medium
+  low
+}
+
+enum ActionType {
+  block_ip
+  rate_limit
+  alert_soc
+  manual_review
+}
+
+// ── Job ─────────────────────────────────────────────────────────────────────
+// One execution cycle triggered by the scheduler or manually
+
+model Job {
+  id            String       @id @default(uuid())
+  jobId         String       @unique
+  status        JobStatus    @default(PENDING)
+  windowFrom    BigInt // epoch ms — start of analysis window
+  windowTo      BigInt // epoch ms — end of analysis window
+  totalLogs     Int          @default(0)
+  findingsCount Int          @default(0)
+  actionsCount  Int          @default(0)
+  createdAt     DateTime     @default(now())
+  completedAt   DateTime?
+  findings      Finding[]
+  actions       Action[]
+  report        Report?
+  domainStats   DomainStat[]
+}
+
+// ── Finding ─────────────────────────────────────────────────────────────────
+// One security finding produced by the AI agent per job
+
+model Finding {
+  id              String   @id @default(uuid())
+  jobId           String
+  findingId       String // INC-001, INC-002 ...
+  domain          Domain
+  classification  String // brute_force | resource_exhaustion | port_scan | anomaly ...
+  severity        Severity
+  confidence      Float
+  context         Json // { service, app, environment }
+  offender        Json // { type: "ip|user|service", value: "..." }
+  metrics         Json // { event_count, unique_targets, success_count, failure_count }
+  timeWindowFrom  BigInt
+  timeWindowTo    BigInt
+  evidenceSamples String[]
+  summary         String
+  createdAt       DateTime @default(now())
+
+  job     Job      @relation(fields: [jobId], references: [jobId])
+  actions Action[]
+}
+
+// ── Action ──────────────────────────────────────────────────────────────────
+// One remediation step taken in response to a finding
+
+model Action {
+  id          String       @id @default(uuid())
+  jobId       String
+  findingId   String? // nullable — some actions are job-level
+  domain      Domain
+  actionType  ActionType
+  description String
+  status      ActionStatus @default(PENDING)
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+
+  job     Job      @relation(fields: [jobId], references: [jobId])
+  finding Finding? @relation(fields: [findingId], references: [id])
+}
+
+// ── Report ──────────────────────────────────────────────────────────────────
+// One report per job — machine JSON + human SOC markdown
+
+model Report {
+  id          String   @id @default(uuid())
+  jobId       String   @unique
+  jsonReport  Json // full AgentOutput (findings array + metadata)
+  humanReport String // SOC markdown (Section B from agent)
+  createdAt   DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [jobId])
+}
+
+// ── DomainStat ──────────────────────────────────────────────────────────────
+// Per-domain aggregates for each job — feeds the dashboard domain breakdown
+
+model DomainStat {
+  id            String @id @default(uuid())
+  jobId         String
+  domain        Domain
+  logsProcessed Int    @default(0)
+  findingsCount Int    @default(0)
+  actionsCount  Int    @default(0)
+
+  job Job @relation(fields: [jobId], references: [jobId])
+
+  @@unique([jobId, domain])
+}
+
+// ── GlobalStat ──────────────────────────────────────────────────────────────
+// Single-row running totals — upserted after every completed job
+
+model GlobalStat {
+  id            String   @id @default("singleton")
+  totalJobs     Int      @default(0)
+  totalLogs     Int      @default(0)
+  totalFindings Int      @default(0)
+  totalActions  Int      @default(0)
+  lastUpdated   DateTime @default(now())
+}
