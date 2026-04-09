@@ -3,9 +3,10 @@ import { prisma } from "../lib/db"
 import { emitState } from "../websocket/socket";
 import { fetchLogs } from "./loki";
 import { runAnalysis } from "./agent";
-import { notifySlack, createJiraTicket, sendEmailReport } from "./remediation";
+import { notifySlack, createJiraTicket, sendEmailReport , blockIpOnCloudflare } from "./remediation";
 import { JobState } from "../core/stateMachine";
 import { ActionType, Domain, Severity } from "../generated/prisma/enums";
+import { notEqual } from "assert";
 
 const DOMAINS = ["http", "infra", "auth"] as const;
 
@@ -117,13 +118,26 @@ export async function runJob(windowMinutes = 60) {
                 status: "IN_PROGRESS",
             },
         });
+try{
 
-        await executeAction(step);
+     const finding = findings.find(
+            (f) => f.finding_id === step.findingId
+        );
+
+    await executeAction(step,finding);
 
         await prisma.action.update({
             where: { id: action.id },
             data: { status: "DONE", completedAt: new Date() },
         });
+
+}catch(err){
+    await prisma.action.update({
+      where:{ id: action.id },
+      data:{ status:"FAILED" }
+   });
+}
+        
     }
 
     console.log(`✅ [PHASE 6 COMPLETE] Remediation done`);
@@ -173,7 +187,6 @@ export async function runJob(windowMinutes = 60) {
     const summary = `${findings.length} finding(s), ${remediationSteps.length} action(s) taken.`;
 
     await Promise.allSettled([
-        notifySlack(jobId, summary),
         createJiraTicket(jobId, findings),
         sendEmailReport(jobId, agentOutput.soc_report),
     ]);
@@ -195,33 +208,150 @@ interface RemediationStep {
     domain: string;
     actionType: string;
     description: string;
+    offender?: string;
 }
+
+// function buildRemediationSteps(findings: any[]): RemediationStep[] {
+//     const steps: RemediationStep[] = [];
+
+//     for (const f of findings) {
+//         switch (f.classification) {
+//             case "brute_force":
+//                 steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "block_ip", description: `Block offender ${f.offender.value} (brute force on ${f.domain})` });
+//                 steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "alert_soc", description: `Alert SOC for finding ${f.finding_id}` });
+//                 break;
+//             case "resource_exhaustion":
+//                 steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "rate_limit", description: `Apply rate-limit for ${f.offender.value} on ${f.domain}` });
+//                 break;
+//             case "port_scan":
+//                 steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "block_ip", description: `Block scanner ${f.offender.value}` });
+//                 break;
+//             default:
+//                 steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "alert_soc", description: `Manual review needed for ${f.finding_id}` });
+//         }
+//     }
+
+//     return steps;
+// }
+
+
+
+
 
 function buildRemediationSteps(findings: any[]): RemediationStep[] {
     const steps: RemediationStep[] = [];
 
     for (const f of findings) {
-        switch (f.classification) {
-            case "brute_force":
-                steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "block_ip", description: `Block offender ${f.offender.value} (brute force on ${f.domain})` });
-                steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "alert_soc", description: `Alert SOC for finding ${f.finding_id}` });
-                break;
-            case "resource_exhaustion":
-                steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "rate_limit", description: `Apply rate-limit for ${f.offender.value} on ${f.domain}` });
-                break;
-            case "port_scan":
-                steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "block_ip", description: `Block scanner ${f.offender.value}` });
-                break;
-            default:
-                steps.push({ findingId: f.finding_id, domain: f.domain, actionType: "alert_soc", description: `Manual review needed for ${f.finding_id}` });
+        const recommendation =
+            `${f.classification} ${f.summary} ${f.recommended_action || ""}`
+                .toLowerCase();
+
+        // BLOCK IP cases
+        if (
+            recommendation.includes("block ip") ||
+            recommendation.includes("sql injection") ||
+            recommendation.includes("credential stuffing") ||
+            recommendation.includes("endpoint scanning")
+        ) {
+            steps.push({
+                findingId: f.finding_id,
+                domain: f.domain,
+                actionType: "block_ip",
+                description: `Block offender ${f.offender.value}`
+            });
+            break;
         }
+
+        // RATE LIMIT cases
+        if (
+            recommendation.includes("rate limit") ||
+            recommendation.includes("resource exhaustion")
+        ) {
+            steps.push({
+                findingId: f.finding_id,
+                domain: f.domain,
+                actionType: "rate_limit",
+                description: `Rate limit ${f.offender.value}`
+            });
+            
+        }
+
+        // RESOURCE SCALE / Jira infra issue
+        if (
+            recommendation.includes("increase memory") ||
+            recommendation.includes("service crash")
+        ) {
+            steps.push({
+                findingId: f.finding_id,
+                domain: f.domain,
+                actionType: "allocate_resources",
+                description: `Allocate infra resources for ${f.offender.value}`
+            });
+            
+        }
+
+        // default SOC alert
+        steps.push({
+            findingId: f.finding_id,
+            domain: f.domain,
+            actionType: "alert_soc",
+            description: `SOC review for ${f.finding_id}`
+        });
     }
 
     return steps;
 }
+// async function executeAction(step: RemediationStep) {
+//     // Wire real firewall / rate-limiter calls here.
+//     // For now resolves immediately — replace with actual integrations.
+//     return Promise.resolve();
+// }
 
-async function executeAction(step: RemediationStep) {
-    // Wire real firewall / rate-limiter calls here.
-    // For now resolves immediately — replace with actual integrations.
+async function executeAction(step: RemediationStep, finding: any) {
+
+    console.log("executing actions s s");
+    switch (step.actionType) {
+        case "block_ip":
+            console.log(`🔥 Blocking IP`);
+             await blockIpOnCloudflare(
+                finding?.offender?.value,
+                `Blocked due to ${finding?.classification}`
+            );
+            break;
+
+        case "rate_limit":
+            console.log(`🚦 Applying rate limit`);
+
+             await createJiraTicket(
+                `rate-limit-${step.findingId}`,
+                [finding]
+            );
+            break;
+
+        case "allocate_resources":
+            console.log(`📈 Allocating resources`);
+            await createJiraTicket(
+                `infra-${step.findingId}`,
+                [finding]
+            );
+            break;
+
+        case "alert_soc":
+            console.log(`🚨 Alerting SOC`);
+
+            await notifySlack(
+                `
+Job ID: ${finding?.finding_id}`,
+`Summary: ${finding?.summary}`,
+`Classification: ${finding?.classification}`,
+`Severity: ${finding?.severity}`,
+`Recommended Action: ${finding?.recommended_action}`
+            );
+            break;
+
+        default:
+            console.log(`No action`);
+    }
+
     return Promise.resolve();
 }
