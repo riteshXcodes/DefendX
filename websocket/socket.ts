@@ -16,6 +16,7 @@ export const emitState = (
 ) => {
     if (!wss) return;
     const msg = JSON.stringify({ jobId, state, payload, timestamp: Date.now() });
+    console.log("📡 EMITTING:", msg); // 👈 ADD THIS
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) client.send(msg);
     });

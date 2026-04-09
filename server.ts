@@ -1,11 +1,9 @@
 import dotenv from "dotenv";
 if (process.env.NODE_ENV !== "production") dotenv.config();
-
 import express from "express";
 import http from "http";
 import { initSocket } from "./websocket/socket";
 import { router } from "./routes/index";
-import { fetchLogs } from "./lib/loki";
 const app = express();
 const server = http.createServer(app);
 
@@ -14,33 +12,51 @@ app.use("/api", router);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
-
-// // 🔹 Test Loki logs
-// app.post("/test/loki", async (req, res) => {
-//   const limit = req.body.limit || 1000;
-
-//   console.log("🧪 [TEST] Loki fetch started...");
+// const DOMAINS = ["http", "infra", "auth"] as const;
+// 🧪 Simple OpenRouter Connectivity Test
+// app.post("/test/ai", async (req, res) => {
+//   console.log("🤖 [TEST] AI connection started...");
 
 //   try {
-//     const logs = await fetchLogs(limit);
+//     const response = await commanderClient.post("/chat/completions", {
+//       model: OPENROUTER_MODEL,
+//       messages: [
+//         {
+//           role: "user",
+//           content: "Respond with the result of 2 + 2. Only return the number."
+//         },
+//       ],
+//       // Keep it cheap and fast
+//       max_tokens: 10,
+//       temperature: 0,
+//     });
 
-//     console.log(`✅ [TEST] Loki success | Logs: ${logs.length}`);
+//     const answer = response.data.choices[0].message.content.trim();
+
+//     console.log(`✅ [AI TEST SUCCESS] Answer: ${answer}`);
 
 //     res.json({
 //       success: true,
-//       count: logs.length,
-//       sample: logs.slice(0, 10), // only return first 10 logs
+//       model_used: OPENROUTER_MODEL,
+//       result: answer,
+//       full_response: response.data
 //     });
 
 //   } catch (err: any) {
-//     console.error("❌ [TEST] Loki failed:", err.message);
+//     // Detailed error logging to catch that 402 or key issues
+//     const statusCode = err.response?.status;
+//     const errorData = err.response?.data;
 
-//     res.status(500).json({
+//     console.error(`❌ [AI TEST FAILED] Status: ${statusCode}`);
+//     console.error("Error Detail:", JSON.stringify(errorData, null, 2));
+
+//     res.status(statusCode || 500).json({
 //       success: false,
+//       status: statusCode,
 //       error: err.message,
+//       details: errorData
 //     });
 //   }
-// });
 
 initSocket(server);
 

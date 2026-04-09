@@ -14,49 +14,36 @@ export async function pushLogs(streams: any[]) {
     }
 }
 
-// Returns raw log lines
 export async function fetchLogs(
-    limit: number = 1000,
-    forward: boolean = true
+    domain: "http" | "infra" | "auth",
+    from: number,
+    to: number
 ): Promise<string[]> {
+    const servicePattern: Record<string, string> = {
+        http: `{service=~"api-gateway.*"}`,
+        infra: `{service=~"payment-service|data-processor|order-service|search-service|notification-service|user-service|inventory-service"}`,
+        auth: `{service=~"auth-service.*"}`,
+    };
 
-    const LIMIT_DEFAULT = 1000;
-    const QUERY_DEFAULT = '{service=~".+"}';
-    const TEN_MINUTES_MS = 60 * 60 * 1000;
-
-    const now = Date.now() * 1_000_000;
-    const tenMinutesAgo = (Date.now() - TEN_MINUTES_MS) * 1_000_000;
-
-    const query = QUERY_DEFAULT;
-    const from = tenMinutesAgo;
-    const to = now;
+    const params = {
+        query: servicePattern[domain],
+        start: String(from),  
+        end: String(to),
+        limit: 5000,
+        direction: "FORWARD",
+    };
 
     try {
-        const response = await lokiClient.get(`/loki/api/v1/query_range`, {
-            params: {
-                query,
-                start: from,
-                end: to,
-                limit: limit || LIMIT_DEFAULT,
-                direction: forward ? "FORWARD" : "BACKWARD",
-            },
-        });
+        const { data } = await lokiClient.get("/loki/api/v1/query_range", { params });
 
-        console.log("📦 Loki Raw Result Count:", response.data?.data?.result?.length);
-
-        const streams = response.data?.data?.result || [];
-
-        // Extract log lines
-        const logs: string[] = streams.flatMap((stream: any) =>
-            stream.values.map((v: any) => v[1])
-        );
-
-        return logs;
+        const lines: string[] = [];
+        for (const stream of data?.data?.result ?? []) {
+            for (const [, line] of stream.values) lines.push(line);
+        }
+        return lines;
 
     } catch (err: any) {
-        console.error("Query failed. Falling back to empty logs.");
-        console.error(err?.response?.data || err.message);
-
+        console.error(`[LOKI] fetchLogs(${domain}) failed:`, err?.response?.data ?? err.message);
         return [];
     }
 }
