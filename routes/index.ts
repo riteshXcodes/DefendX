@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/db";
 import { runJob } from "../lib/jobRunner";
 import { pushLogs } from "../lib/loki";
-
+import { formatJobsBatch } from "../utils/jobformatter";
 export const router = Router();
 
 router.post("/pushLogs", async (req, res) => {
@@ -95,4 +95,14 @@ router.get("/reports/:jobId", async (req, res) => {
     });
     if (!report) return res.status(404).json({ error: "Not found" });
     res.json(report);
+});
+
+//--All Jobs---
+
+router.get("/allJobs", async (req, res) => {
+    const jobs = await prisma.job.findMany();
+
+    const formattedJobs = formatJobsBatch(jobs, "iso"); // or "locale"
+
+    res.json(formattedJobs);
 });
