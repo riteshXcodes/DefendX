@@ -6,11 +6,24 @@ export function convertBigIntToTime(
 ) {
     if (!value) return null;
 
-    const date = new Date(Number(value));
+    let num = Number(value);
 
-    if (format === "locale") {
-        return date.toLocaleString(); // UI friendly
+    if (num > 1e18) {
+        num = Math.floor(num / 1e6);
+    } else if (num > 1e15) {
+        num = Math.floor(num / 1e3);
+    } else if (num < 1e12) {
+        num = num * 1000;
     }
 
-    return date.toISOString(); // API standard
+    const date = new Date(num);
+
+    if (isNaN(date.getTime())) {
+        console.error("Invalid timestamp:", value);
+        return null;
+    }
+
+    return format === "locale"
+        ? date.toLocaleString()
+        : date.toISOString();
 }

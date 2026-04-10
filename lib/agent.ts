@@ -1,4 +1,4 @@
-import { commanderClient, OPENROUTER_MODEL } from "../config/index.js";
+import { commanderClient, OPENROUTER_MODEL } from "../config/index";
 
 export interface AgentFinding {
     finding_id: string;

@@ -2,11 +2,13 @@ import dotenv from "dotenv";
 if (process.env.NODE_ENV !== "production") dotenv.config();
 import express from "express";
 import http from "http";
-import { initSocket } from "./websocket/socket.js";
-import { router } from "./routes/index.js";
+import { initSocket } from "./websocket/socket";
+import { router } from "./routes/index";
+import morgan from "morgan";
 const app = express();
 const server = http.createServer(app);
 
+app.use(morgan("dev"));
 app.use(express.json());
 app.get("/", (req, res) => {
     return res.send("DefendX API are running healthy...");

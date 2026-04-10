@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { prisma } from "../lib/db.js";
-import { runJob } from "../lib/jobRunner.js";
-import { pushLogs } from "../lib/loki.js";
-import { formatJobsBatch } from "../utils/jobformatter.js";
+import { prisma } from "../lib/db";
+import { runJob } from "../lib/jobRunner";
+import { pushLogs } from "../lib/loki";
+import { formatJobsBatch } from "../utils/jobformatter";
 export const router = Router();
 
 router.post("/pushLogs", async (req, res) => {

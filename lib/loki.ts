@@ -1,4 +1,4 @@
-import { lokiClient } from "../config/index.js";
+import { lokiClient } from "../config/index";
 
 const LOKI_URL = process.env.LOKI_URL!;
 

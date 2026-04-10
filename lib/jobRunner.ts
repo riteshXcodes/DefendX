@@ -1,12 +1,11 @@
 import { v4 as uuid } from "uuid";
-import { prisma } from "../lib/db.js"
-import { emitState } from "../websocket/socket.js";
-import { fetchLogs } from "./loki.js";
-import { runAnalysis } from "./agent.js";
-import { notifySlack, createJiraTicket, sendEmailReport, blockIpOnCloudflare } from "./remediation.js";
-import { JobState } from "../core/stateMachine.js";
-import { ActionType, Domain, Severity } from "../generated/prisma/enums.js";
-import { notEqual } from "assert";
+import { prisma } from "../lib/db"
+import { emitState } from "../websocket/socket";
+import { fetchLogs } from "./loki";
+import { runAnalysis } from "./agent";
+import { notifySlack, createJiraTicket, sendEmailReport, blockIpOnCloudflare } from "./remediation";
+import { JobState } from "../core/stateMachine";
+import { ActionType, Domain, Severity } from "../generated/prisma/enums";
 
 const DOMAINS = ["http", "infra", "auth"] as const;
 
