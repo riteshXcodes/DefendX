@@ -33,6 +33,14 @@ router.get("/jobs/:jobId", async (req, res) => {
     res.json(job);
 });
 
+function jsonSafe<T>(value: T): T {
+    return JSON.parse(
+        JSON.stringify(value, (_key, item) =>
+            typeof item === "bigint" ? item.toString() : item
+        )
+    ) as T;
+}
+
 // ── Dashboard — global summary + per-domain breakdown ──────────────────────
 router.get("/dashboard", async (_req, res) => {
     const [globalStat, domainAgg, recentJobs] = await Promise.all([
@@ -46,15 +54,11 @@ router.get("/dashboard", async (_req, res) => {
         prisma.job.findMany({
             orderBy: { createdAt: "desc" },
             take: 10,
-            select: {
-                jobId: true, status: true, totalLogs: true,
-                findingsCount: true, actionsCount: true,
-                createdAt: true, completedAt: true,
-            },
+            include: { findings: true, actions: true },
         }),
     ]);
 
-    res.json({ globalStat, domainBreakdown: domainAgg, recentJobs });
+    res.json(jsonSafe({ globalStat, domainBreakdown: domainAgg, recentJobs }));
 });
 
 // ── Incident history — all actions taken, paginated ────────────────────────
@@ -78,13 +82,18 @@ router.get("/incidents", async (req, res) => {
 // ── Reports — list all ─────────────────────────────────────────────────────
 router.get("/reports", async (req, res) => {
     const reports = await prisma.report.findMany({
+        where: {
+            job: {
+                status: "COMPLETED",
+            },
+        },
         orderBy: { createdAt: "desc" },
         select: {
             id: true, jobId: true, createdAt: true,
             job: { select: { findingsCount: true, actionsCount: true, status: true } },
         },
     });
-    res.json(reports);
+    res.json({ reports });
 });
 
 // ── Single report ───────────────────────────────────────────────────────────
@@ -102,7 +111,7 @@ router.get("/reports/:jobId", async (req, res) => {
 router.get("/allJobs", async (req, res) => {
     const jobs = await prisma.job.findMany();
 
-    const formattedJobs = formatJobsBatch(jobs, "iso"); // or "locale"
+    const formattedJobs = formatJobsBatch(jobs, "iso");
 
     res.json(formattedJobs);
 });
