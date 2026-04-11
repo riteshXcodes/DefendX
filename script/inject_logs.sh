@@ -22,7 +22,7 @@ echo "========================================"
 
 # --- Brute Force Attack (IP: 203.0.113.50) ---
 echo "1. Brute Force Attack Pattern..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -45,7 +45,7 @@ echo "✓ Brute force injected — IP: 203.0.113.50 (10 failed attempts)"
 
 # --- Credential Stuffing (IP: 198.51.100.42) ---
 echo "2. Credential Stuffing Pattern..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -65,7 +65,7 @@ echo "✓ Credential stuffing injected — IP: 198.51.100.42 (7 users targeted, 
 
 # --- Geo-Impossible / Suspicious Login ---
 echo "3. Geo-Impossible Login Behaviour..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -82,7 +82,7 @@ echo "✓ Geo-impossible logins injected (US→RU, US→CN)"
 
 # --- Token Replay/Reuse (IP: 172.16.50.88) ---
 echo "4. Token Abuse Pattern..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -101,7 +101,7 @@ echo "✓ Token abuse injected — IP: 172.16.50.88 (expired/invalid/revoked tok
 
 # --- Normal Auth Baseline ---
 echo "5. Normal Auth Baseline..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -127,7 +127,7 @@ echo "========================================"
 
 # --- Rate Abuse / Endpoint Abuse (IP: 45.142.120.10) ---
 echo "6. Rate Abuse Pattern..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -147,7 +147,7 @@ echo "✓ Rate abuse injected — IP: 45.142.120.10 (7 rate-limit hits)"
 
 # --- Endpoint/Bot Scanning (IP: 203.0.113.45) ---
 echo "7. Bot Endpoint Scanning..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -169,7 +169,7 @@ echo "✓ Bot scanning injected — IP: 203.0.113.45 (9 distinct probes)"
 
 # --- Unauthorized API Access (IP: 198.51.100.20) ---
 echo "8. Unauthorized Admin Access..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -189,7 +189,7 @@ echo "✓ Unauthorized access injected — IP: 198.51.100.20 (7 forbidden admin 
 
 # --- SQL Injection (IP: 89.248.165.72) ---
 echo "9. SQL Injection Attempts..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -205,7 +205,7 @@ echo "✓ SQL injection injected — IP: 89.248.165.72 (3 blocked attempts)"
 
 # --- Resource Exhaustion / DDoS (IP: 104.21.45.78) ---
 echo "10. DDoS / Resource Exhaustion..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -223,7 +223,7 @@ echo "✓ DDoS flood injected — IP: 104.21.45.78 (rate spike → rate_limited)
 
 # --- Normal API Baseline ---
 echo "11. Normal API Traffic Baseline..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -250,7 +250,7 @@ echo "=============================================="
 
 # --- Service Crash Loop (payment-service) ---
 echo "12. Service Crash Loop..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -273,7 +273,7 @@ echo "✓ Crash loop injected — payment-service (4 restart attempts)"
 
 # --- OOM / Resource Exhaustion (data-processor) ---
 echo "13. OOM Resource Exhaustion..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -293,7 +293,7 @@ echo "✓ OOM exhaustion injected — data-processor (60%→97%→killed)"
 
 # --- Dependency Failure (order-service → inventory-service) ---
 echo "14. Dependency / Circuit Breaker Failure..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -312,7 +312,7 @@ echo "✓ Dependency failure injected — order-service → inventory-service (c
 
 # --- CPU/Performance Degradation (search-service) ---
 echo "15. CPU / Performance Degradation..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -332,7 +332,7 @@ echo "✓ CPU degradation injected — search-service (45%→94% over 6m)"
 
 # --- Configuration Error (notification-service) ---
 echo "16. Configuration Error..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [{
@@ -352,7 +352,7 @@ echo "✓ Config error injected — notification-service (invalid smtp.port, loo
 
 # --- Normal Service Health Baseline ---
 echo "17. Normal Service Health Baseline..."
-curl -s -o /dev/null -X POST "${BASE_URL}/push_logs" \
+curl -s -o /dev/null -X POST "${BASE_URL}/api/pushLogs" \
   -H "Content-Type: application/json" \
   -d "{
     \"streams\": [

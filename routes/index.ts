@@ -6,14 +6,14 @@ import { formatJobsBatch } from "../utils/jobformatter";
 export const router = Router();
 
 router.post("/pushLogs", async (req, res) => {
-    const { stream } = req.body;
+    const { streams } = req.body;
     try {
-        await pushLogs(stream);
-        res.json({ status: "success", ingested_streams: stream.length });
+        await pushLogs(streams);
+        res.json({ status: "success", ingested_streams: streams.length });
     } catch (err) {
         res.status(500).json({ error: "Failed to push logs" });
     }
-})
+});
 
 // ── Trigger a new analysis job ──────────────────────────────────────────────
 router.post("/jobs/trigger", async (req, res) => {
