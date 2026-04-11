@@ -4,8 +4,13 @@ import express from "express";
 import http from "http";
 import { initSocket } from "./websocket/socket";
 import { router } from "./routes/index";
+import cors from "cors";
 import morgan from "morgan";
 const app = express();
+app.use(cors({
+    origin : '*',
+    credentials : true  
+}));
 const server = http.createServer(app);
 
 app.use(morgan("dev"));
