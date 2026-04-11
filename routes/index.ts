@@ -103,7 +103,7 @@ router.get("/reports/:jobId", async (req, res) => {
         include: { job: { include: { findings: true, actions: true } } },
     });
     if (!report) return res.status(404).json({ error: "Not found" });
-    res.json(report);
+    res.json(jsonSafe(report));
 });
 
 //--All Jobs---
